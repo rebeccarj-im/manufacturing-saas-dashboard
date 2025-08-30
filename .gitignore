@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+backend/app/data/*.db
+backend/app/data/**/*.db
+*.sqlite
+*.sqlite3
+.DS_Store
