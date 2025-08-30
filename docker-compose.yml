@@ -6,13 +6,8 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: sqlite:///app/app/data/app.db
+      - DATABASE_URL=sqlite:///app/app/data/app.db
     volumes:
       - app-data:/app/app/data
-    healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8000/api/health"]
-      interval: 10s
-      timeout: 3s
-      retries: 6
 volumes:
   app-data:
