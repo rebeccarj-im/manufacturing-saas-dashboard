@@ -5,7 +5,17 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Cancel in-flight runs on the same ref and keep only the latest
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write   # needed to push images to GHCR
+
 jobs:
+  # 1) Test (pytest)
   test:
     runs-on: ubuntu-latest
     defaults:
@@ -23,23 +33,20 @@ jobs:
         run: |
           python -V
           pwd
-          ls -la
-          echo "== find SQL files =="
           find . -maxdepth 4 -type f -name "*.sql" -print || true
 
-      - name: Install deps
+      - name: Install dependencies
         run: |
           python -m pip install -U pip wheel setuptools
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          # 兜底，万一 requirements 里没写
+          # Fallback install in case some libs are missing from requirements.txt
           python - <<'PY'
           import importlib, sys, subprocess
-          need = []
-          for m in ["fastapi","uvicorn","pydantic"]:
+          need=[]
+          for m in ["fastapi","uvicorn","pydantic","httpx"]:
             try: importlib.import_module(m)
             except Exception: need.append(m+"[standard]" if m=="uvicorn" else m)
-          if need:
-            subprocess.check_call([sys.executable,"-m","pip","install","-U",*need])
+          if need: subprocess.check_call([sys.executable,"-m","pip","install","-U",*need])
           PY
           pip install -U pytest
 
@@ -47,3 +54,77 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}/backend
         run: pytest -q
+
+  # 2) Build and push image to GHCR (main branch only)
+  build_and_push_image:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/backend
+          tags: |
+            type=raw,value=sha-${{ github.sha }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build & push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  # 3) (Optional) SSH deploy to a server
+  # Enable by setting repository variable DEPLOY_ENABLED=true
+  # and adding required Secrets (see notes below).
+  deploy_staging:
+    needs: build_and_push_image
+    if: github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            sudo mkdir -p /srv/executive-dashboard && sudo chown -R $USER:$USER /srv/executive-dashboard
+            cd /srv/executive-dashboard
+            cat > docker-compose.yml <<'YML'
+            services:
+              api:
+                image: ghcr.io/${{ github.repository }}/backend:latest
+                ports:
+                  - "8000:8000"
+                environment:
+                  - DATABASE_URL=sqlite:///app/app/data/app.db
+                volumes:
+                  - app-data:/app/app/data
+            volumes:
+              app-data:
+            YML
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_USER }} --password-stdin
+            docker compose pull
+            docker compose up -d
+            curl -fsS http://localhost:8000/api/health
