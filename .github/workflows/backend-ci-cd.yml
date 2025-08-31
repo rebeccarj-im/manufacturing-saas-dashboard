@@ -1,11 +1,8 @@
 name: backend-ci-cd
 
 on:
-  pull_request:
-    paths: ['backend/**']
   push:
-    branches: ['main']
-    paths: ['backend/**']
+  pull_request:
   workflow_dispatch:
 
 jobs:
@@ -16,18 +13,37 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
           cache: 'pip'
 
-      # 安装依赖 + pytest（有就装 requirements-dev，没有也确保 pytest 存在）
-      - run: python -m pip install -U pip wheel setuptools
-      - run: pip install -r requirements.txt
-      - run: |
-          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+      - name: Show env & SQL presence
+        run: |
+          python -V
+          pwd
+          ls -la
+          echo "== find SQL files =="
+          find . -maxdepth 4 -type f -name "*.sql" -print || true
+
+      - name: Install deps
+        run: |
+          python -m pip install -U pip wheel setuptools
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          # 兜底，万一 requirements 里没写
+          python - <<'PY'
+          import importlib, sys, subprocess
+          need = []
+          for m in ["fastapi","uvicorn","pydantic"]:
+            try: importlib.import_module(m)
+            except Exception: need.append(m+"[standard]" if m=="uvicorn" else m)
+          if need:
+            subprocess.check_call([sys.executable,"-m","pip","install","-U",*need])
+          PY
           pip install -U pytest
 
-      # 运行测试（不要显式设置 DATABASE_URL，交给 conftest 生成正确的绝对路径）
-      - name: Pytest
-        run: python -m pytest -q
+      - name: Run tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}/backend
+        run: pytest -q
