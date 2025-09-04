@@ -143,9 +143,9 @@ jobs:
             docker compose pull
             docker compose up -d
 
-            # Wait until the app is ready (max ~60s), then fail if still not healthy
+            # Wait until the app is ready (max ~60s)
             for i in {1..30}; do
-              if curl -fsS http://localhost:8000/api/health >/dev/null; then
+              if curl -fsS http://localhost/api/health >/dev/null; then
                 echo "Health check passed."
                 break
               fi
@@ -153,4 +153,4 @@ jobs:
               sleep 2
             done
             # Final assert (will fail the step if unhealthy)
-            curl -fsS http://localhost:8000/api/health
+            curl -fsS http://localhost/api/health
