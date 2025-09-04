@@ -128,6 +128,7 @@ jobs:
             services:
               api:
                 image: ghcr.io/${{ github.repository }}/backend:latest
+                restart: unless-stopped
                 ports:
                   - "80:8000"   # public 80 -> container 8000
                 environment:
