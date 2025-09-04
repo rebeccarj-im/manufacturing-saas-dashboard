@@ -10,9 +10,10 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Needed to read code and push images to GHCR
 permissions:
   contents: read
-  packages: write   # needed to push images to GHCR
+  packages: write
 
 jobs:
   # 1) Test (pytest)
@@ -22,12 +23,14 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-          cache: 'pip'
+          python-version: "3.12"
+          cache: "pip"
 
       - name: Show env & SQL presence
         run: |
@@ -39,7 +42,7 @@ jobs:
         run: |
           python -m pip install -U pip wheel setuptools
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          # Fallback install in case some libs are missing from requirements.txt
+          # Fallback: ensure core libs exist even if requirements.txt is incomplete
           python - <<'PY'
           import importlib, sys, subprocess
           need=[]
@@ -61,10 +64,14 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -94,7 +101,9 @@ jobs:
 
   # 3) (Optional) SSH deploy to a server
   # Enable by setting repository variable DEPLOY_ENABLED=true
-  # and adding required Secrets (see notes below).
+  # Required secrets:
+  #   SSH_HOST, SSH_USER, SSH_KEY (PEM contents)
+  #   GHCR_USER, GHCR_TOKEN (token with read:packages)
   deploy_staging:
     needs: build_and_push_image
     if: github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
@@ -109,14 +118,18 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: |
             set -e
-            sudo mkdir -p /srv/executive-dashboard && sudo chown -R $USER:$USER /srv/executive-dashboard
+            # Prepare deploy directory
+            sudo mkdir -p /srv/executive-dashboard
+            sudo chown -R $USER:$USER /srv/executive-dashboard
             cd /srv/executive-dashboard
+
+            # Write docker-compose file (exposes service on port 80 externally)
             cat > docker-compose.yml <<'YML'
             services:
               api:
                 image: ghcr.io/${{ github.repository }}/backend:latest
                 ports:
-                  - "8000:8000"
+                  - "80:8000"   # public 80 -> container 8000
                 environment:
                   - DATABASE_URL=sqlite:///app/app/data/app.db
                 volumes:
@@ -124,7 +137,20 @@ jobs:
             volumes:
               app-data:
             YML
+
+            # Login to GHCR (server side) and deploy
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_USER }} --password-stdin
             docker compose pull
             docker compose up -d
+
+            # Wait until the app is ready (max ~60s), then fail if still not healthy
+            for i in {1..30}; do
+              if curl -fsS http://localhost:8000/api/health >/dev/null; then
+                echo "Health check passed."
+                break
+              fi
+              echo "Waiting for app to become healthy ($i/30)..."
+              sleep 2
+            done
+            # Final assert (will fail the step if unhealthy)
             curl -fsS http://localhost:8000/api/health
