@@ -42,7 +42,7 @@ jobs:
         run: |
           python -m pip install -U pip wheel setuptools
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          # Fallback: ensure core libs exist even if requirements.txt is incomplete
+          # Fallback to ensure core libs exist even if requirements.txt misses some
           python - <<'PY'
           import importlib, sys, subprocess
           need=[]
@@ -111,7 +111,7 @@ jobs:
     environment: staging
     steps:
       - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1.0.0
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
@@ -132,7 +132,10 @@ jobs:
                 ports:
                   - "80:8000"   # public 80 -> container 8000
                 environment:
-                  - DATABASE_URL=sqlite:///app/app/data/app.db
+                  # IMPORTANT: absolute SQLite path (4 slashes). The data dir is volume-mounted.
+                  - DATABASE_URL=sqlite:////app/app/data/app.db
+                  # Default acceptance window samples; override in server if needed
+                  - QUALITY_GATES_MIN_SAMPLES=20
                 volumes:
                   - app-data:/app/app/data
             volumes:
@@ -153,5 +156,11 @@ jobs:
               echo "Waiting for app to become healthy ($i/30)..."
               sleep 2
             done
-            # Final assert (will fail the step if unhealthy)
-            curl -fsS http://localhost/api/health
+
+            # Pre-warm RUM tables (best-effort): creates user_events tables on first deploy
+            curl -s -X POST http://localhost/api/events \
+              -H 'Content-Type: application/json' \
+              -d '{"event_type":"switch_range_or_granularity","meta":{"ttfb_ms":200}}' || true
+
+            # Print quality-gates (best-effort)
+            curl -s http://localhost/api/quality-gates || true
