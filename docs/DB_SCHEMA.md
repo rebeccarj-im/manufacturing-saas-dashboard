@@ -1,3 +1,4 @@
+
 # Executive Dashboard – Database Schema (SQLite)
 
 ## Overview
@@ -6,6 +7,7 @@
 - Naming consistency:
   - Orders date column: `order_date`
   - Feedback timestamp: `created_at`
+- **RUM metrics** (Real User Monitoring) are kept in a **side table**; units are **milliseconds** unless noted.
 
 ---
 
@@ -166,7 +168,6 @@
 - `profit` REAL NOT NULL
 - `order_date` DATE NOT NULL
 - `type` TEXT  *(e.g., `recognized`, `booked`, `subscription`, `recurring`)*
-- FK: `customer_id`
 
 ### `expenses`
 - `id` INTEGER PK
@@ -214,6 +215,19 @@
 
 ---
 
+## RUM Side Table
+### `user_event_meta`
+- `event_id` INTEGER NOT NULL REFERENCES `user_events(id)` ON DELETE CASCADE
+- `metric`   TEXT NOT NULL
+- `v`        REAL
+- `raw`      TEXT  -- optional JSON blob
+**Primary Key:** `(event_id, metric)`
+
+**Notes**
+- Timing metrics use **milliseconds**; `drilldown_clicks` is a count.
+
+---
+
 ## Indexes
 ```sql
 CREATE INDEX IF NOT EXISTS idx_orders_order_date            ON orders(order_date);
@@ -224,6 +238,7 @@ CREATE INDEX IF NOT EXISTS idx_page_visits_date             ON page_visits(visit
 CREATE INDEX IF NOT EXISTS idx_product_feedback_created     ON product_feedback(created_at);
 CREATE INDEX IF NOT EXISTS idx_top_products_daily_period    ON top_products_daily(period);
 CREATE INDEX IF NOT EXISTS idx_pipeline_stages_daily_period ON pipeline_stages_daily(period);
+CREATE INDEX IF NOT EXISTS idx_eventmeta_metric             ON user_event_meta(metric);
 ```
 
 ---
@@ -232,3 +247,4 @@ CREATE INDEX IF NOT EXISTS idx_pipeline_stages_daily_period ON pipeline_stages_d
 - **Backlog** in `revenue_trend` is **period-end**; for quarter aggregation take **quarter-end**.
 - **ARR** = `12 × MRR`, MRR from end-month `orders` with `type IN ('subscription','recurring')`.
 - **Coverage Months** denominator is a **fixed 6-month** average recognized revenue.
+- P95 for timing metrics can be computed using SQLite window functions over recent (e.g., 7–30 days) `user_events` + `user_event_meta` joins.

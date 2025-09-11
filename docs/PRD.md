@@ -1,3 +1,4 @@
+
 # Executive Dashboard – Product Requirements Document (PRD)
 
 ## 1. Background
@@ -27,9 +28,8 @@ Existing reporting is fragmented, laggy, and not interactive. The goal is a **si
 ---
 
 ## 3. Target Users & Use Cases
-
 ### Users
-- CEO, CFO, COO, and senior executives
+- CEO, CFO, COO, senior executives
 - Department heads (Finance, Operations, Sales, Marketing)
 
 ### Use Cases
@@ -41,11 +41,10 @@ Existing reporting is fragmented, laggy, and not interactive. The goal is a **si
 ---
 
 ## 4. Features & Priorities
-
 | Module | First-Screen Content | Implementation | Collaboration Value | Priority |
 |---|---|---|---|---|
 | Dashboard | “Now / Reason / Action”: 6 KPIs (Backlog, Uptime, NRR, GM%, Payback, Revenue) + 4 Highlights (Book-to-Bill, Coverage Months, ARR, Forecast) | React + ECharts (FE), FastAPI aggregation (BE), Vite proxy in dev | Addresses exec priorities | MVP |
-| Prototype Design | Layout: KPI area / revenue trends / risk panel / tri-color alerts; M/Q granularity | Componentized cards; URL params; backend recalculation | Visual consistency | MVP |
+| Prototype | Layout: KPI area / revenue trends / risk panel / tri-color alerts; M/Q granularity | Componentized cards; URL params; backend recalculation | Visual consistency | MVP |
 | API Contract | `GET /api/executive-dashboard` returns `executiveKpis`, `revenueTrend`, `alerts`, `risks`, `timeframe` | FastAPI routes; SQLite aggregation; aligned TS types | Stable contract | MVP |
 | Data Model | `orders, customers, expenses, revenue_trend, retention_nrr` tables; backlog is period-end | Indexed queries; unified logic; ratios for rates | Reduces mismatch | MVP |
 | Acceptance Criteria | TTFB/render/switch/alert polling as above | Indexed queries, light aggregation, lazy-loading | Quantifiable | MVP |
@@ -63,7 +62,7 @@ Existing reporting is fragmented, laggy, and not interactive. The goal is a **si
 - **Recognized Revenue (`revenue`)** – Sum recognized in window.
 - **Backlog (`backlog`)** – Period-end undelivered orders; **quarter shows quarter-end**.
 - **Uptime (`uptime`)** – Weighted availability over window.
-- **NRR (`nrr`)** – (Opening MRR - churn + expansion) / Opening MRR (can be >1).
+- **NRR (`nrr`)** – (Opening MRR − churn + expansion) / Opening MRR (can be >1).
 - **GM% (`gm`)** – Σprofit / Σamount (prefer 0–1).
 - **Payback (`payback`)** – CAC payback in months (MVP static if needed).
 - **Book-to-Bill (`book_to_bill`)** – Σbooked / Σrecognized.
@@ -92,20 +91,29 @@ Existing reporting is fragmented, laggy, and not interactive. The goal is a **si
 ---
 
 ## 8. Observability & Analytics
-- Event logging to `user_events`: `switch_range_or_granularity`, `drilldown`, `alert_click`, `export_csv`.
-- Metrics via API gateway and application logs.
+- Frontend sends RUM via `POST /api/events` with `meta` keys:  
+  `ttfb_ms`, `render_total_ms`, `switch_latency_ms`, `alerts_poll_interval_ms`, `drilldown_duration_ms`, `drilldown_clicks`.
+- Backend stores metrics in `user_events` + `user_event_meta`; compute P95 over the last 7–30 days.
 
 ---
 
-## 9. Roadmap
+## 9. Acceptance & Validation
+
+### Contract Validation
+- Validate OpenAPI schema and example responses in CI (schemathesis / spectral).
+
+### E2E (User-Perceived)
+- Reach any drill-down in **≤ 2 clicks** from `/dashboard` (Playwright/Cypress).
+- Granularity switch **P95 < 200ms** (Performance API / intercepted timing).
+- Alerts polling interval **≈ 30s** (allow ± jitter if applied).
+
+### SLO Tracking (Production)
+- Track **TTFB P95 < 300ms**, **render P95 < 1s**, **switch P95 < 200ms**, error rate.
+- Use OpenTelemetry/Prometheus and/or RUM-derived P95 from `user_event_meta` (Grafana panel + alerting).
+
+---
+
+## 10. Roadmap
 - **MVP (Delivered):** Static-rule alerts, manual metric definitions, first-screen interactions & drill-down framework.
 - **P2 (Planned):** Real backlog data, telemetry uptime integration, `/api/ai-summary` with graceful degradation.
 - **P3 (Optional):** Analytics dashboard; anomaly detection & forecasting.
-
----
-
-## 10. Acceptance Criteria (Detailed)
-- Functional: First-screen KPIs & highlights reflect backend; drill-down consistency; granularity switch triggers recalculation.
-- Performance: TTFB < 300ms; render < 1s; switch < 200ms.
-- Stability: Fallbacks/caching active; third-party failures do not block.
-- Observability: Event logs queryable; drill-down and time-switch tracked.

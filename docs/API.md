@@ -1,14 +1,15 @@
+
 # Executive Dashboard – API Documentation
 
 ## Overview
-- Base Path: `/api`
-- Content-Type: `application/json`
-- Auth: Handled by API Gateway in production (see Technical Design). Dev uses Vite proxy.
+- **Base Path:** `/api`
+- **Content-Type:** `application/json`
+- **Auth:** Production uses an **API Gateway** (JWT verification, rate limiting, retries, short TTL cache). Development uses a **Vite proxy**.
 
-> **Notation & Conventions**
-> - Monetary values are returned as numbers with an optional `unit` (default: `¥`).
-> - **Rates are unitless ratios.** Prefer **0–1** for percentages; **NRR may be >1** (e.g., 1.08 = 108%). If any source stores 0–100, the backend/FE normalize for display.
-> - `delta` values are **fractional change vs the previous equal-length window** (e.g., +8.2% → `0.082`).
+> ### Notation & Conventions
+> - Monetary values are numbers with an optional `unit` (default `¥`).
+> - **Rates are unitless ratios.** Prefer **0–1** for percentages; **NRR may be >1** (e.g., `1.08 = 108%`). If any source stores 0–100, the backend/FE normalize for display.
+> - `delta` values are **fractional change vs the previous equal-length window** (e.g., `+8.2% → 0.082`).
 
 ---
 
@@ -64,14 +65,14 @@
 }
 ```
 
-**Field Semantics**
+### Field Semantics
 - `timeframe.start_date` / `end_date`: inclusive date window, aligned to full months.
 - `revenueTrend.period`:
   - `granularity=month` → `"YYYY-MM"` (e.g., `2025-08`)
   - `granularity=quarter` → `"YYYY-Qn"` (e.g., `2025-Q3`)
 - **Backlog semantics**:
-  - `revenueTrend.backlog`: **period-end value**.
-  - Quarterly view uses the **quarter-end value** (last month of quarter).
+  - `revenueTrend.backlog` is **period-end**.
+  - Quarterly view uses the **quarter-end** value (last month of quarter).
 - **KPI semantics**:
   - `revenue` (currency): Sum of recognized revenue in window.
   - `backlog` (currency): Ending undelivered orders amount (period-end).
@@ -80,7 +81,7 @@
   - `gm` (ratio): Gross margin.
   - `payback` (months): CAC payback period (MVP can be static).
   - `book_to_bill` (ratio): Σ(booked) / Σ(recognized) over window.
-  - `coverage_months` (months): **Fixed 6-month** average recognized denominator.
+  - `coverage_months` (months): Ending backlog / **avg recognized of last 6 months**.
   - `arr` (currency): **12 × MRR**, where MRR is end-month subscription/recurring sum.
   - `forecast` (currency): **Pipeline × win rate** (preferred); fallback to trailing 3-month average × **1.02**.
 
@@ -90,9 +91,9 @@
 
 ### (a) KPI Drilldown
 **Endpoint:** `GET /api/kpis/{key}`  
-**Path Param:** `key` ∈ `revenue | backlog | uptime | nrr | gm | payback | book_to_bill | coverage_months | arr | forecast`  
+**Path Param:** `key ∈ {revenue, backlog, uptime, nrr, gm, payback, book_to_bill, coverage_months, arr, forecast}`  
 **Query Params:** `range`, `granularity` (same as above)  
-**Response:** Trend, breakdown by dimension (e.g., customer, product), depending on the KPI.
+**Response:** Trend + breakdown by dimension (e.g., customer, product).
 
 ### (b) Operations – Uptime
 **Endpoint:** `GET /api/operations/uptime`  
@@ -105,6 +106,7 @@ Returns customers at churn risk with MRR, risk (0–1), and reasons.
 ---
 
 ## 4. Analytics & Tracking
+
 **Endpoint:** `POST /api/events`  
 **Payload:**
 ```json
@@ -115,14 +117,29 @@ Returns customers at churn risk with MRR, risk (0–1), and reasons.
 { "status": "logged" }
 ```
 
-**Event Types (MVP)**
+### Event Types (MVP)
 - `switch_range_or_granularity`
 - `drilldown`
 - `alert_click`
 - `export_csv`
 
+### RUM Metrics in `meta` (for acceptance measurement)
+- **Accepted formats**
+  - Single key:
+    ```json
+    { "event_type":"switch_range_or_granularity","meta":{"metric":"ttfb_ms","v":123} }
+    ```
+  - Flat multi-key:
+    ```json
+    { "event_type":"switch_range_or_granularity","meta":{"ttfb_ms":123,"render_total_ms":860} }
+    ```
+- **Allowed keys** (unit: ms unless noted):  
+  `ttfb_ms`, `render_total_ms`, `switch_latency_ms`, `alerts_poll_interval_ms`, `drilldown_duration_ms`, `drilldown_clicks` (clicks).
+
 ---
 
 ## 5. Errors
-- 400 – Invalid parameter (range/granularity).
-- 500 – Internal error (DB unavailable, etc.).
+- **400** – Invalid parameter (range/granularity) or invalid event payload
+- **401/403** – Unauthorized/Forbidden (production gateway)
+- **429** – Rate-limited by gateway (production)
+- **500** – Internal error (DB unavailable, etc.)
