@@ -43,7 +43,7 @@ export interface MeetingQueryParams {
  * Get all meetings, optionally filtered by date range
  */
 export async function getMeetings(params?: MeetingQueryParams): Promise<Meeting[]> {
-  const queryPath = withQuery("/api/meetings", params || {});
+  const queryPath = withQuery("/api/meetings", (params || {}) as Record<string, any>);
   return apiGet<Meeting[]>(queryPath);
 }
 
