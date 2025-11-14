@@ -1,0 +1,1 @@
+pytest -q backend/tests

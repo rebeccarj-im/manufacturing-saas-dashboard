@@ -1,0 +1,23 @@
+# --- Core API stack ---
+fastapi==0.112.2
+uvicorn[standard]==0.30.6
+SQLAlchemy==2.0.34
+pydantic==2.8.2
+pydantic-settings==2.4.0
+python-dotenv==1.0.1
+starlette==0.38.5          # Stable version compatible with FastAPI 0.112.x
+
+# --- Optional JSON performance (FastAPI will use it automatically; fine if not installed) ---
+orjson==3.10.7
+
+# --- HTTP client (tests / health checks / potential integrations) ---
+httpx==0.27.2
+
+# --- OpenAI (optional; /api/ai-summary will automatically fall back, runs even without it) ---
+openai>=1.40.0,<2.0.0
+
+# --- Testing (CI) ---
+pytest==8.3.3
+
+# --- Typing (useful in some environments; optional) ---
+typing_extensions>=4.12.2
