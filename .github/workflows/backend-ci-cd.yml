@@ -58,6 +58,9 @@ jobs:
     needs: test
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -73,6 +76,9 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
+          # For organization repos, if GITHUB_TOKEN doesn't work, use a PAT:
+          # password: ${{ secrets.GHCR_TOKEN }}
+          # And create a secret GHCR_TOKEN with a PAT that has write:packages permission
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract metadata (tags, labels)
@@ -83,6 +89,9 @@ jobs:
           tags: |
             type=raw,value=sha-${{ github.sha }}
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+          tags-lowercase: true
+          flavor: |
+            lowercase=true
 
       - name: Build & push image
         uses: docker/build-push-action@v6
