@@ -2,7 +2,8 @@
 
 A high-performance, AI-enhanced executive dashboard built as a Minimum Viable Product (MVP) to validate the concept of a unified decision-intelligence platform. This full-stack application delivers real-time KPI monitoring with advanced visualizations and AI-powered insights, all while enforcing strict performance budgets.
 
-<img width="1464" height="796" alt="image" src="https://github.com/user-attachments/assets/06aa1575-f25e-4aa9-9e44-8a6a5a006ee1" />
+<img width="1464" height="867" alt="image" src="https://github.com/user-attachments/assets/7d49bae9-4951-4abf-ab13-4cedb428fd41" />
+
 
 ## Live Demo
 http://3.248.229.177/dashboard
