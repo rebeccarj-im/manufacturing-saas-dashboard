@@ -29,6 +29,7 @@ DROP TABLE IF EXISTS telemetry_active_devices;
 DROP TABLE IF EXISTS top_products_daily;
 DROP TABLE IF EXISTS top_products;
 
+DROP TABLE IF EXISTS messages;
 DROP TABLE IF EXISTS feedback;
 DROP TABLE IF EXISTS feedback_scores;
 DROP TABLE IF EXISTS product_feedback;
@@ -284,6 +285,21 @@ CREATE TABLE IF NOT EXISTS meetings (
   CHECK (end_time > start_time)
 );
 
+-- ===================== Messages =====================
+CREATE TABLE messages (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  title         TEXT NOT NULL,
+  content       TEXT NOT NULL,
+  sender        TEXT,
+  recipient_id  INTEGER,
+  priority      TEXT NOT NULL DEFAULT 'normal',
+  read          BOOLEAN NOT NULL DEFAULT 0,
+  archived      BOOLEAN NOT NULL DEFAULT 0,
+  created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CHECK (priority IN ('low', 'normal', 'high', 'urgent'))
+);
+
 -- ===================== Indexes =====================
 CREATE INDEX IF NOT EXISTS idx_orders_order_date            ON orders(order_date);
 CREATE INDEX IF NOT EXISTS idx_orders_customer_id           ON orders(customer_id);
@@ -295,3 +311,7 @@ CREATE INDEX IF NOT EXISTS idx_top_products_daily_period    ON top_products_dail
 CREATE INDEX IF NOT EXISTS idx_pipeline_stages_daily_period ON pipeline_stages_daily(period);
 CREATE INDEX IF NOT EXISTS idx_meetings_start_time          ON meetings(start_time);
 CREATE INDEX IF NOT EXISTS idx_meetings_end_time            ON meetings(end_time);
+CREATE INDEX IF NOT EXISTS idx_messages_recipient           ON messages(recipient_id);
+CREATE INDEX IF NOT EXISTS idx_messages_read                ON messages(read);
+CREATE INDEX IF NOT EXISTS idx_messages_archived            ON messages(archived);
+CREATE INDEX IF NOT EXISTS idx_messages_created_at          ON messages(created_at);
