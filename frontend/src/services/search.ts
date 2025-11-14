@@ -19,7 +19,7 @@ export interface SearchParams {
  * Search across pages, KPIs, and modules
  */
 export async function search(params: SearchParams): Promise<SearchResult[]> {
-  const path = withQuery("/api/search", params);
-  return apiGet<SearchResult[]>(path);
+  const queryPath = withQuery("/api/search", params);
+  return apiGet<SearchResult[]>(queryPath);
 }
 
