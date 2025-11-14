@@ -81,17 +81,22 @@ jobs:
           # And create a secret GHCR_TOKEN with a PAT that has write:packages permission
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set image name (lowercase)
+        id: image
+        run: |
+          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          REPO_LC=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
+          echo "image=ghcr.io/${OWNER_LC}/${REPO_LC}-backend" >> $GITHUB_OUTPUT
+
       - name: Extract metadata (tags, labels)
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-backend
+          images: ${{ steps.image.outputs.image }}
           tags: |
             type=raw,value=sha-${{ github.sha }}
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-          tags-lowercase: true
-          flavor: |
-            lowercase=true
+          flavor: latest=true
 
       - name: Build & push image
         uses: docker/build-push-action@v6
