@@ -6,7 +6,14 @@ A high-performance, AI-enhanced executive dashboard built as a Minimum Viable Pr
 
 
 
+> **Status:** All core features are implemented. Conversational chat and authentication/login are currently under active development.
+
+<img width="1464" height="867" alt="image" src="https://github.com/user-attachments/assets/81ac59a3-7290-4800-8d3d-de274a586130" />
+
+---
+
 ## Live Demo
+
 http://3.248.229.177/dashboard
 
 ---
@@ -41,20 +48,11 @@ http://3.248.229.177/dashboard
 - **🚀 Zero-Downtime Deployments**  
   Full CI/CD pipeline with GitHub Actions and Docker enables production updates in under 180 seconds.
 
----
-
-## 🔜 In Progress / Upcoming Capabilities
-
-The platform is actively evolving toward a richer, more personalized decision-intelligence experience. The following capabilities are **in development** and will be available soon:
-
 - **💬 In-App Messaging & Notifications**  
   Contextual system and AI-driven messages surfaced directly in the UI (e.g., alerts, insights, anomalies).
 
 - **🔍 Global Search**  
   Unified, natural-language search across KPIs, dashboards, entities, and AI-generated insights.
-
-- **🔐 Authentication & Authorization**  
-  Login, session management, and role-based access control to support secure multi-user environments.
 
 - **👤 User Profiles & Preferences**  
   User-level configuration for:
@@ -65,16 +63,31 @@ The platform is actively evolving toward a richer, more personalized decision-in
 
 ---
 
+## 🔜 In Progress / Upcoming Capabilities
+
+The platform is actively evolving toward a richer, more conversational and secure decision-intelligence experience. The following capabilities are **in development**:
+
+- **💬 Conversational Chat Experience**  
+  A richer, multi-turn chat interface on top of the embedded AI agent, including:
+  - Persistent conversation history  
+  - Threaded discussions around specific KPIs or incidents  
+  - Deeper exploration flows for “why” and “what-if” questions  
+
+- **🔐 Authentication & Authorization**  
+  Login, session management, and role-based access control to support secure multi-user environments.
+
+---
+
 ## 🛠️ Tech Stack
 
-| Layer        | Technology                                                    |
-|-------------|----------------------------------------------------------------|
-| **Frontend** | React 18, TypeScript, ECharts, Vite, Tailwind CSS             |
-| **Backend**  | FastAPI, Python 3.10, SQLite (WAL mode), Pydantic             |
-| **AI Integration** | OpenAI GPT-4 API, embedded AI agent in the dashboard UI |
-| **Monitoring** | Custom RUM, Quality-Gates API                               |
-| **DevOps**   | Docker, GitHub Actions, AWS EC2, Docker Compose               |
-| **Architecture** | Client-Server API, Responsive Design, Component-Based UI  |
+| Layer              | Technology                                                    |
+|--------------------|----------------------------------------------------------------|
+| **Frontend**       | React 18, TypeScript, ECharts, Vite, Tailwind CSS             |
+| **Backend**        | FastAPI, Python 3.10, SQLite (WAL mode), Pydantic             |
+| **AI Integration** | OpenAI GPT-4 API, embedded AI agent in the dashboard UI       |
+| **Monitoring**     | Custom RUM, Quality-Gates API                                 |
+| **DevOps**         | Docker, GitHub Actions, AWS EC2, Docker Compose               |
+| **Architecture**   | Client-Server API, Responsive Design, Component-Based UI      |
 
 ---
 
@@ -118,7 +131,5 @@ Once running, the application will be available at:
 - **Frontend**: http://localhost:5173  
 - **Backend API**: http://localhost:8000  
 - **API Documentation**: http://localhost:8000/docs
-
-
 
 
