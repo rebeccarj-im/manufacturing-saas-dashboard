@@ -4,7 +4,7 @@ A high-performance, AI-enhanced executive dashboard built as a Minimum Viable Pr
 
 **Status:** All core features are implemented and successfully deployed to AWS EC2. Conversational chat and authentication/login are currently under active development.
 
----
+
 <img width="1464" height="867" alt="image" src="https://github.com/user-attachments/assets/81ac59a3-7290-4800-8d3d-de274a586130" />
 
 ## 🌐 Live Dashboards
